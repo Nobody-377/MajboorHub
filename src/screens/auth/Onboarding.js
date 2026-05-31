@@ -1,34 +1,111 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Search, ShieldCheck, Wrench } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Search, ShieldCheck, Wrench, UserCheck, Award, Calendar, Handshake, MapPin } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../../utils/colors';
 
+const slides = [
+  {
+    title: "Find Skilled Workers Instantly",
+    subtitle: "Connect with verified plumbers, electricians, carpenters, and more in your area.",
+    centerIcon: (color, size) => <Search color={color} size={size} />,
+    floatingLeft: (color, size) => <Wrench color={color} size={size} />,
+    floatingRight: (color, size) => <MapPin color={color} size={size} />
+  },
+  {
+    title: "Verified & Trustworthy Profiles",
+    subtitle: "Every worker on our platform is background-checked and identity-verified for your safety.",
+    centerIcon: (color, size) => <ShieldCheck color={color} size={size} />,
+    floatingLeft: (color, size) => <UserCheck color={color} size={size} />,
+    floatingRight: (color, size) => <Award color={color} size={size} />
+  },
+  {
+    title: "Transparent & Direct Booking",
+    subtitle: "Book skilled professionals directly, negotiate rates, and track progress.",
+    centerIcon: (color, size) => <Handshake color={color} size={size} />,
+    floatingLeft: (color, size) => <Calendar color={color} size={size} />,
+    floatingRight: (color, size) => <Wrench color={color} size={size} />
+  }
+];
+
 export default function Onboarding({ navigation }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current; // Start at 0 to fade in the first slide
+  const translateYAnim = useRef(new Animated.Value(10)).current; // Start with a slight offset
+
+  // 1. Autoplay Timer: Resets and counts a fresh 4.5 seconds every time activeIndex changes
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % slides.length);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, [activeIndex]);
+
+  // 2. Declarative Animation Trigger: Automatically plays the transition animation whenever activeIndex changes
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    translateYAnim.setValue(10);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, [activeIndex]);
+
+  const goToSlide = (index) => {
+    if (index === activeIndex) return;
+    setActiveIndex(index);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <View style={styles.illustrationContainer}>
-          <View style={[styles.floatingIcon, { top: 10, right: 10 }]}>
-            <ShieldCheck color={colors.success} size={32} />
+        <Animated.View 
+          style={[
+            styles.slideContainer, 
+            { 
+              opacity: fadeAnim,
+              transform: [{ translateY: translateYAnim }] 
+            }
+          ]}
+        >
+          <View style={styles.illustrationContainer}>
+            <View style={[styles.floatingIcon, { top: 10, right: 10 }]}>
+              {slides[activeIndex].floatingRight(colors.success, 32)}
+            </View>
+            <View style={[styles.floatingIcon, { bottom: 20, left: 0 }]}>
+              {slides[activeIndex].floatingLeft(colors.accent, 32)}
+            </View>
+            <View style={styles.centerIcon}>
+              {slides[activeIndex].centerIcon(colors.primary, 64)}
+            </View>
           </View>
-          <View style={[styles.floatingIcon, { bottom: 20, left: 0 }]}>
-            <Wrench color={colors.accent} size={32} />
-          </View>
-          <View style={styles.centerIcon}>
-            <Search color={colors.primary} size={64} />
-          </View>
-        </View>
 
-        <Text style={styles.title}>Find Skilled Workers instantly</Text>
-        <Text style={styles.subtitle}>
-          Connect with verified plumbers, electricians, carpenters, and more in your area.
-        </Text>
+          <Text style={styles.title}>{slides[activeIndex].title}</Text>
+          <Text style={styles.subtitle}>{slides[activeIndex].subtitle}</Text>
+        </Animated.View>
 
         <View style={styles.dotsContainer}>
-          <View style={[styles.dot, styles.activeDot]} />
-          <View style={styles.dot} />
-          <View style={styles.dot} />
+          {slides.map((_, index) => (
+            <TouchableOpacity
+              key={index}
+              activeOpacity={0.8}
+              onPress={() => goToSlide(index)}
+              style={[
+                styles.dot,
+                activeIndex === index && styles.activeDot
+              ]}
+            />
+          ))}
         </View>
       </View>
 
@@ -52,6 +129,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  slideContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   illustrationContainer: {
     width: 240,
